@@ -1,0 +1,3 @@
+Building the VHDL:
+
+../../../../bin/hdlmake.py -t ../templates/null -b ep2c5

@@ -1,0 +1,26 @@
+NATIVE DIGITAL RGB TO VGA CONVERTER
+
+This code accepts a pixel clock, R, G, B, HS and VS from an old computer and
+generates a VGA signal suitable for display on a modern monitor. The main
+caveat is that monitors to be used with PAL machines must be able to deal with a
+50.000Hz vsync (many do, some do not).
+
+BUILDING
+
+chris@wotan$ cd $HOME
+chris@wotan$ wget -qO- https://github.com/makestuff/hdlmake/archive/master.tar.gz | tar zxf -
+chris@wotan$ cd hdlmake-master/bin
+chris@wotan$ export PATH=${PATH}:$(pwd)
+chris@wotan$ cd ../apps
+chris@wotan$ hdlmake.py -g makestuff/rgb2vga
+  :
+chris@wotan$ cd makestuff/rgb2vga/vhdl/
+chris@wotan$ hdlmake.py -t ../templates/null -b ep2c5
+
+This will build a .svf file suitable for loading into an Altera EP2C5 FPGA (e.g
+http://www.ebay.co.uk/itm/150835820710). Suitable level-shifting is required to
+protect the FPGA from any 5V signals. On the VGA side, a series 270R resistor on
+the R, G & B lines is all that's needed.
+
+Chris McClelland
+2013-05-10

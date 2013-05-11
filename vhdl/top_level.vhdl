@@ -51,8 +51,12 @@ architecture rtl of top_level is
 	signal vSync_s25b    : std_logic := '0';      -- hSync_s25a, synchronized again
 	signal vCount        : unsigned(10 downto 0) := (others => '0');
 	signal vCount_next   : unsigned(10 downto 0);
+	signal ram0wren      : std_logic := '0';
+	signal ram1wren      : std_logic := '0';
+	signal ram0data      : std_logic_vector(3 downto 0) := "0000";
+	signal ram1data      : std_logic_vector(3 downto 0) := "0000";
 	constant ORIGIN      : unsigned(10 downto 0) := (others => '0');
-	constant HSHIFT      : integer := 224;
+	constant HSHIFT      : integer := 0;
 begin
 	-- Generate the 25MHz pixel clock from the input clock
 	clk_gen: entity work.clk_gen
@@ -62,18 +66,37 @@ begin
 			c1     => clk25
 		);
 
-	-- Generate the 25MHz pixel clock from the input clock
+	-- Two RAM blocks for storing pixel lines (read from one, write to other, then swap every 64us)
 	ram0: entity work.dpram
 		port map(
-			data      => "0000",
-			rdaddress => std_logic_vector(hCount25b(9 downto 0)),
-			rdclock   => clk25,
+			-- Write port
+			data      => "0" & rgb_in,
 			wraddress => std_logic_vector(hCount16),
 			wrclock   => clk16,
-			wren      => '0',
-			q         => open
+			wren      => ram0wren,
+
+			-- Read port
+			rdaddress => std_logic_vector(hCount25b(9 downto 0)),
+			rdclock   => clk25,
+			q         => ram0data
+		);
+	ram1: entity work.dpram
+		port map(
+			-- Write port
+			data      => "0" & rgb_in,
+			wraddress => std_logic_vector(hCount16),
+			wrclock   => clk16,
+			wren      => ram1wren,
+
+			-- Read port
+			rdaddress => std_logic_vector(hCount25b(9 downto 0)),
+			rdclock   => clk25,
+			q         => ram1data
 		);
 
+	ram0wren <= std_logic(vCount(1));
+	ram1wren <= not(ram0wren);
+	
 	-- Create horizontal and vertical counts, aligned to incoming hSync and vSync
 	hCount16_next <=
 		(others => '0') when hSync_in = '1' and hSync_s16 = '0'
@@ -119,6 +142,8 @@ begin
 	end process;
 	
 	-- Just pipe the incoming RGB data back out
-	rgb_out <= rgb_in;
+	rgb_out <=
+		ram0data(2 downto 0) when ram1wren = '1' else
+		ram1data(2 downto 0);
 
 end architecture;

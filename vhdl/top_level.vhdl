@@ -72,7 +72,7 @@ begin
 
 	-- Create horizontal and vertical counts, aligned to incoming hSync and vSync
 	hCount_next <=
-		ORIGIN when hSync_s0 = '1' and hSync_s1 = '0'
+		ORIGIN-HSHIFT when hSync_s0 = '1' and hSync_s1 = '0'
 		else hCount + 1;
 	vCount_next <=
 		ORIGIN when vSync_s0 = '1' and vSync_s1 = '0' else
@@ -81,7 +81,7 @@ begin
 
 	-- Generate VGA hSync and vSync
 	hSync_out <=
-		'0' when (hCount >= HSHIFT and hCount < HSHIFT+96) or (hCount >= HSHIFT+800 and hCount < HSHIFT+896)
+		'0' when (hCount < 96) or (hCount >= 800 and hCount < 896)
 		else '1';
 	vSync_out <=
 		'0' when vCount < 2

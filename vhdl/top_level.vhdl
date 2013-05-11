@@ -37,7 +37,8 @@ entity top_level is
 end entity;
 
 architecture rtl of top_level is
-	signal pixClk      : std_logic := '0';      -- 25MHz pixel clock
+	signal clk16       : std_logic := '0';      -- 16MHz input pixel clock
+	signal clk25       : std_logic := '0';      -- 25MHz output pixel clock
 	signal hSync_s0    : std_logic := '0';      -- hSync_in, synchronized to 25MHz clock
 	signal hSync_s1    : std_logic := '0';      -- hSync_s0, synchronized again
 	signal hCount      : unsigned(10 downto 0) := (others => '0');
@@ -53,8 +54,20 @@ begin
 	clk_gen: entity work.clk_gen
 		port map(
 			inclk0 => sysClk_in,
-			c0     => pixClk,
-			locked => open
+			c0     => clk16,
+			c1     => clk25
+		);
+
+	-- Generate the 25MHz pixel clock from the input clock
+	ram0: entity work.dpram
+		port map(
+			data      => "0000",
+			rdaddress => "0000000000",
+			rdclock   => clk25,
+			wraddress => "0000000000",
+			wrclock   => clk16,
+			wren      => '0',
+			q         => open
 		);
 
 	-- Create horizontal and vertical counts, aligned to incoming hSync and vSync
@@ -74,10 +87,10 @@ begin
 		'0' when vCount < 2
 		else '1';
 
-	-- Synchronize incoming hSync & vSync to the 25MHz pixClk
-	process(pixClk)
+	-- Synchronize incoming hSync & vSync to the 25MHz clock
+	process(clk25)
 	begin
-		if ( rising_edge(pixClk) ) then
+		if ( rising_edge(clk25) ) then
 			hSync_s0 <= hSync_in;
 			hSync_s1 <= hSync_s0;
 			vSync_s0 <= vSync_in;

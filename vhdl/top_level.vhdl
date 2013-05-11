@@ -21,70 +21,73 @@ use ieee.numeric_std.all;
 
 entity top_level is
 	port (
+		-- 16MHz pixel clock from BBC Micro
 		sysClk_in : in  std_logic;
+
+		-- Input 15.625kHz RGB signals
+		hSync_in  : in  std_logic;
+		vSync_in  : in  std_logic;
+		rgb_in    : in  std_logic_vector(2 downto 0);
+
+		-- Output to 31.250kHz VGA monitor
 		hSync_out : out std_logic;
 		vSync_out : out std_logic;
-		rgb_in    : in  std_logic_vector(2 downto 0);
 		rgb_out   : out std_logic_vector(2 downto 0)
 	);
 end entity;
 
 architecture rtl of top_level is
-	signal locked   : std_logic;             -- goes high when pixClk DLL locks
-	signal reset    : std_logic;             -- remains high until pixClk DLL locks
-	signal pixClk   : std_logic := '0';      -- 25MHz pixel clock
-	signal pixX     : unsigned(9 downto 0);  -- current pixel's X coordinate
-	signal pixY     : unsigned(9 downto 0);  -- current pixel's Y coordinate
-	constant HRES   : integer := 640;        -- horizontal resolution
-	--constant VRES   : integer := 480;        -- vertical resolution
-	constant VRES   : integer := 512;
+	signal pixClk      : std_logic := '0';      -- 25MHz pixel clock
+	signal hSync_s0    : std_logic := '0';      -- hSync_in, synchronized to 25MHz clock
+	signal hSync_s1    : std_logic := '0';      -- hSync_s0, synchronized again
+	signal hCount      : unsigned(10 downto 0) := (others => '0');
+	signal hCount_next : unsigned(10 downto 0);
+	signal vSync_s0    : std_logic := '0';      -- hSync_in, synchronized to 25MHz clock
+	signal vSync_s1    : std_logic := '0';      -- hSync_s0, synchronized again
+	signal vCount      : unsigned(10 downto 0) := (others => '0');
+	signal vCount_next : unsigned(10 downto 0);
+	constant ORIGIN    : unsigned(10 downto 0) := (others => '0');
+	constant HSHIFT    : integer := 224;
 begin
-	-- Instantiate VGA sync circuit, driven with the 25MHz pixel clock
-	vga_sync: entity work.vga_sync
-		generic map (
-			-- Horizontal parameters (numbers are pixClk counts)
-			HORIZ_DISP => HRES,
-			HORIZ_FP   => 16,
-			HORIZ_RT   => 96,
-			HORIZ_BP   => 48,
-
-			-- Vertical parameters (in line counts)
-			VERT_DISP  => VRES,
-			--VERT_FP    => 10,  -- 640x480 @ 60Hz
-			--VERT_RT    => 2,
-			--VERT_BP    => 29
-			VERT_FP    => 45,  -- 640x512 @ 50Hz
-			VERT_RT    => 2,
-			VERT_BP    => 66
-		)
-		port map(
-			clk_in     => pixClk,
-			reset_in   => reset,
-			hSync_out  => hSync_out,
-			vSync_out  => vSync_out,
-			pixX_out   => pixX,
-			pixY_out   => pixY
-		);
-
 	-- Generate the 25MHz pixel clock from the input clock
-	clk_gen: entity work.clk_gen_wrapper
+	clk_gen: entity work.clk_gen
 		port map(
-			clk_in     => sysClk_in,
-			clk_out    => pixClk,
-			locked_out => locked
+			inclk0 => sysClk_in,
+			c0     => pixClk,
+			locked => open
 		);
 
-	-- We're in reset until the DLL locks on
-	reset <= not(locked);
+	-- Create horizontal and vertical counts, aligned to incoming hSync and vSync
+	hCount_next <=
+		ORIGIN when hSync_s0 = '1' and hSync_s1 = '0'
+		else hCount + 1;
+	vCount_next <=
+		ORIGIN when vSync_s0 = '1' and vSync_s1 = '0' else
+		vCount + 1 when hCount = 0 else
+		vCount;
 
-	-- Set the visible area to eight vertical colour bars
+	-- Generate VGA hSync and vSync
+	hSync_out <=
+		'0' when (hCount >= HSHIFT and hCount < HSHIFT+96) or (hCount >= HSHIFT+800 and hCount < HSHIFT+896)
+		else '1';
+	vSync_out <=
+		'0' when vCount < 2
+		else '1';
+
+	-- Synchronize incoming hSync & vSync to the 25MHz pixClk
+	process(pixClk)
+	begin
+		if ( rising_edge(pixClk) ) then
+			hSync_s0 <= hSync_in;
+			hSync_s1 <= hSync_s0;
+			vSync_s0 <= vSync_in;
+			vSync_s1 <= vSync_s0;
+			hCount <= hCount_next;
+			vCount <= vCount_next;
+		end if;
+	end process;
+	
+	-- Just pipe the incoming RGB data back out
 	rgb_out <= rgb_in;
-		--"100" when pixX >= 3*HRES/8 and pixX < 4*HRES/8 and pixY < VRES else  -- 4: blue
-		--"011" when pixX >= 2*HRES/8 and pixX < 3*HRES/8 and pixY < VRES else  -- 3: yellow
-		--"010" when pixX >= 1*HRES/8 and pixX < 2*HRES/8 and pixY < VRES else  -- 2: green
-		--"001" when pixX >= 0*HRES/8 and pixX < 1*HRES/8 and pixY < VRES else  -- 1: red
-		--"111" when pixX >= 7*HRES/8 and pixX < 8*HRES/8 and pixY < VRES else  -- 8: white
-		--"110" when pixX >= 6*HRES/8 and pixX < 7*HRES/8 and pixY < VRES else  -- 7: cyan
-		--"101" when pixX >= 5*HRES/8 and pixX < 6*HRES/8 and pixY < VRES else  -- 6: magenta
-		--"000";                                                                -- 5: black
+
 end architecture;

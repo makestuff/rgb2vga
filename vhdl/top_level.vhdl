@@ -39,9 +39,13 @@ end entity;
 architecture rtl of top_level is
 	signal clk16         : std_logic := '0';      -- 16MHz input pixel clock
 	signal clk25         : std_logic := '0';      -- 25MHz output pixel clock
+	signal hSync_s16     : std_logic := '0';      -- hSync_in, registered with 16MHz clock
 	signal hSync_s25a    : std_logic := '0';      -- hSync_in, synchronized to 25MHz clock
 	signal hSync_s25b    : std_logic := '0';      -- hSync_s25a, synchronized again
+	signal hCount16      : unsigned(9 downto 0) := (others => '0');
+	signal hCount16_next : unsigned(9 downto 0);
 	signal hCount25a     : unsigned(10 downto 0) := (others => '0');
+	signal hCount25b     : unsigned(10 downto 0) := (others => '0');
 	signal hCount25_next : unsigned(10 downto 0);
 	signal vSync_s25a    : std_logic := '0';      -- hSync_in, synchronized to 25MHz clock
 	signal vSync_s25b    : std_logic := '0';      -- hSync_s25a, synchronized again
@@ -62,26 +66,32 @@ begin
 	ram0: entity work.dpram
 		port map(
 			data      => "0000",
-			rdaddress => "0000000000",
+			rdaddress => std_logic_vector(hCount25b(9 downto 0)),
 			rdclock   => clk25,
-			wraddress => "0000000000",
+			wraddress => std_logic_vector(hCount16),
 			wrclock   => clk16,
 			wren      => '0',
 			q         => open
 		);
 
 	-- Create horizontal and vertical counts, aligned to incoming hSync and vSync
+	hCount16_next <=
+		(others => '0') when hSync_in = '1' and hSync_s16 = '0'
+		else hCount16 + 1;
 	hCount25_next <=
 		ORIGIN-HSHIFT when hSync_s25a = '1' and hSync_s25b = '0'
 		else hCount25a + 1;
+	hCount25b <=
+		hCount25a when hCount25a < 800
+		else hCount25a - 800;
 	vCount_next <=
 		ORIGIN when vSync_s25a = '1' and vSync_s25b = '0' else
-		vCount + 1 when hCount25a = 0 else
+		vCount + 1 when hCount25b = 0 else
 		vCount;
 
 	-- Generate VGA hSync and vSync
 	hSync_out <=
-		'0' when (hCount25a < 96) or (hCount25a >= 800 and hCount25a < 896)
+		'0' when hCount25b < 96
 		else '1';
 	vSync_out <=
 		'0' when vCount < 2
@@ -95,8 +105,16 @@ begin
 			hSync_s25b <= hSync_s25a;
 			vSync_s25a <= vSync_in;
 			vSync_s25b <= vSync_s25a;
-			hCount25a <= hCount25_next;
-			vCount <= vCount_next;
+			hCount25a  <= hCount25_next;
+			vCount     <= vCount_next;
+		end if;
+	end process;
+
+	process(clk16)
+	begin
+		if ( rising_edge(clk16) ) then
+			hSync_s16 <= hSync_in;
+			hCount16  <= hCount16_next;
 		end if;
 	end process;
 	

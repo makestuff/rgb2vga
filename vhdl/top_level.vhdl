@@ -37,18 +37,18 @@ entity top_level is
 end entity;
 
 architecture rtl of top_level is
-	signal clk16       : std_logic := '0';      -- 16MHz input pixel clock
-	signal clk25       : std_logic := '0';      -- 25MHz output pixel clock
-	signal hSync_s0    : std_logic := '0';      -- hSync_in, synchronized to 25MHz clock
-	signal hSync_s1    : std_logic := '0';      -- hSync_s0, synchronized again
-	signal hCount      : unsigned(10 downto 0) := (others => '0');
-	signal hCount_next : unsigned(10 downto 0);
-	signal vSync_s0    : std_logic := '0';      -- hSync_in, synchronized to 25MHz clock
-	signal vSync_s1    : std_logic := '0';      -- hSync_s0, synchronized again
-	signal vCount      : unsigned(10 downto 0) := (others => '0');
-	signal vCount_next : unsigned(10 downto 0);
-	constant ORIGIN    : unsigned(10 downto 0) := (others => '0');
-	constant HSHIFT    : integer := 224;
+	signal clk16         : std_logic := '0';      -- 16MHz input pixel clock
+	signal clk25         : std_logic := '0';      -- 25MHz output pixel clock
+	signal hSync_s25a    : std_logic := '0';      -- hSync_in, synchronized to 25MHz clock
+	signal hSync_s25b    : std_logic := '0';      -- hSync_s25a, synchronized again
+	signal hCount25a     : unsigned(10 downto 0) := (others => '0');
+	signal hCount25_next : unsigned(10 downto 0);
+	signal vSync_s25a    : std_logic := '0';      -- hSync_in, synchronized to 25MHz clock
+	signal vSync_s25b    : std_logic := '0';      -- hSync_s25a, synchronized again
+	signal vCount        : unsigned(10 downto 0) := (others => '0');
+	signal vCount_next   : unsigned(10 downto 0);
+	constant ORIGIN      : unsigned(10 downto 0) := (others => '0');
+	constant HSHIFT      : integer := 224;
 begin
 	-- Generate the 25MHz pixel clock from the input clock
 	clk_gen: entity work.clk_gen
@@ -71,17 +71,17 @@ begin
 		);
 
 	-- Create horizontal and vertical counts, aligned to incoming hSync and vSync
-	hCount_next <=
-		ORIGIN-HSHIFT when hSync_s0 = '1' and hSync_s1 = '0'
-		else hCount + 1;
+	hCount25_next <=
+		ORIGIN-HSHIFT when hSync_s25a = '1' and hSync_s25b = '0'
+		else hCount25a + 1;
 	vCount_next <=
-		ORIGIN when vSync_s0 = '1' and vSync_s1 = '0' else
-		vCount + 1 when hCount = 0 else
+		ORIGIN when vSync_s25a = '1' and vSync_s25b = '0' else
+		vCount + 1 when hCount25a = 0 else
 		vCount;
 
 	-- Generate VGA hSync and vSync
 	hSync_out <=
-		'0' when (hCount < 96) or (hCount >= 800 and hCount < 896)
+		'0' when (hCount25a < 96) or (hCount25a >= 800 and hCount25a < 896)
 		else '1';
 	vSync_out <=
 		'0' when vCount < 2
@@ -91,11 +91,11 @@ begin
 	process(clk25)
 	begin
 		if ( rising_edge(clk25) ) then
-			hSync_s0 <= hSync_in;
-			hSync_s1 <= hSync_s0;
-			vSync_s0 <= vSync_in;
-			vSync_s1 <= vSync_s0;
-			hCount <= hCount_next;
+			hSync_s25a <= hSync_in;
+			hSync_s25b <= hSync_s25a;
+			vSync_s25a <= vSync_in;
+			vSync_s25b <= vSync_s25a;
+			hCount25a <= hCount25_next;
 			vCount <= vCount_next;
 		end if;
 	end process;

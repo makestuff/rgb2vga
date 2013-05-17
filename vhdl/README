@@ -1,3 +1,48 @@
 Building the VHDL:
 
 ../../../../bin/hdlmake.py -t ../templates/null -b ep2c5
+
+Programming the FPGA:
+
+/home/chris/makestuff/apps/flcli/lin.x64/rel/flcli -v 1d50:602b -p J:B3B2B0B1:top_level.svf
+
+Measured screen dimensions.
+
+Mode 0:
+  Even frames: VSYNC @240; Display@(248,32)
+  Odd frames:  VSYNC @752; Display@(248,33)
+Mode 1:
+  Even frames: VSYNC @240; Display@(249,32)
+  Odd frames:  VSYNC @752; Display@(249,33)
+Mode 2:
+  Even frames: VSYNC @240; Display@(251,32)
+  Odd frames:  VSYNC @752; Display@(251,33)
+Mode 2:
+  Even frames: VSYNC @240; Display@(251,32)
+  Odd frames:  VSYNC @752; Display@(251,33)
+Mode 3:
+  Even frames: VSYNC @240; Display@(248,32)
+  Odd frames:  VSYNC @752; Display@(248,33)
+Mode 4:
+  Even frames: VSYNC @240; Display@(257,32)
+  Odd frames:  VSYNC @752; Display@(257,33)
+Mode 5:
+  Even frames: VSYNC @240; Display@(259,32)
+  Odd frames:  VSYNC @752; Display@(259,33)
+Mode 6:
+  Even frames: VSYNC @240; Display@(257,32)
+  Odd frames:  VSYNC @752; Display@(257,33)
+Mode 7:
+  Even frames: VSYNC @208; Display@(?,32)
+  Odd frames:  VSYNC @720; Display@(?,33)
+
+See snapshots directory for logic analyser logs of the various BBC Micro video
+modes along with reconstructed images.
+
+Mode 7 (SAA5050):
+  Glyph-based display of 480x500 pixels on an interlaced CRT. Each glyph is 5x9
+  pixels. These are interpolated to 10x18 on the fly for use on an interlaced
+  display. The character grid has two blank lines between each character on the
+  vertical and horizontal dimension, giving an array of 40x25 character cells,
+  each of which are 12x20 pixels, giving the total of 480x500 pixels. So we get
+  480 pixels in 40us => 12 pixels in 1us => 12MHz pixel clock.

@@ -24,14 +24,16 @@ set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_
 #===============================================================================
 set_location_assignment PIN_91  -to sysClk_in   # 16MHz clock on pin 91
 
-set_location_assignment PIN_142 -to rgb_in[0]
-set_location_assignment PIN_139 -to rgb_in[1]
-set_location_assignment PIN_136 -to rgb_in[2]
+set_location_assignment PIN_142 -to rgbi_in[0]
+set_location_assignment PIN_139 -to rgbi_in[1]
+set_location_assignment PIN_136 -to rgbi_in[2]
+set_location_assignment PIN_3   -to rgbi_in[3]
 set_location_assignment PIN_134 -to hSync_in
 set_location_assignment PIN_132 -to vSync_in
 
-set_location_assignment PIN_113 -to rgb_out[0]
-set_location_assignment PIN_115 -to rgb_out[1]
-set_location_assignment PIN_119 -to rgb_out[2]
+set_location_assignment PIN_113 -to rgbi_out[0]
+set_location_assignment PIN_115 -to rgbi_out[1]
+set_location_assignment PIN_119 -to rgbi_out[2]
+set_location_assignment PIN_7   -to rgbi_out[3]
 set_location_assignment PIN_121 -to hSync_out
 set_location_assignment PIN_125 -to vSync_out
